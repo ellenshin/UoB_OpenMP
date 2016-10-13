@@ -204,11 +204,8 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
     /* modify the 2nd row of the grid */
     int ii = params.ny - 2;
     
-#pragma omp parallel for ordered
-    
     for (int jj = 0; jj < params.nx; jj++)
     {
-#pragma omp ordered
         {
         /* if the cell is not occupied and
          ** we don't send a negative density */
