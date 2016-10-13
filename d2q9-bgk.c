@@ -55,6 +55,7 @@
 #include<time.h>
 #include<sys/time.h>
 #include<sys/resource.h>
+#include<omp.h>
 
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
@@ -196,32 +197,40 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 
 int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
 {
-  /* compute weighting factors */
-  double w1 = params.density * params.accel / 9.0;
-  double w2 = params.density * params.accel / 36.0;
-
-  /* modify the 2nd row of the grid */
-  int ii = params.ny - 2;
-
-  for (int jj = 0; jj < params.nx; jj++)
-  {
-    /* if the cell is not occupied and
-    ** we don't send a negative density */
-    if (!obstacles[ii * params.nx + jj]
-        && (cells[ii * params.nx + jj].speeds[3] - w1) > 0.0
-        && (cells[ii * params.nx + jj].speeds[6] - w2) > 0.0
-        && (cells[ii * params.nx + jj].speeds[7] - w2) > 0.0)
+    /* compute weighting factors */
+    double w1 = params.density * params.accel / 9.0;
+    double w2 = params.density * params.accel / 36.0;
+    
+    /* modify the 2nd row of the grid */
+    
+    //IMPORTANT: rename ii at some point//
+    int ii = (params.ny - 2) * params.nx;
+    int index;
+//#pragma omp parallel private(jj)
     {
-      /* increase 'east-side' densities */
-      cells[ii * params.nx + jj].speeds[1] += w1;
-      cells[ii * params.nx + jj].speeds[5] += w2;
-      cells[ii * params.nx + jj].speeds[8] += w2;
-      /* decrease 'west-side' densities */
-      cells[ii * params.nx + jj].speeds[3] -= w1;
-      cells[ii * params.nx + jj].speeds[6] -= w2;
-      cells[ii * params.nx + jj].speeds[7] -= w2;
-    }
-  }
+//#pragma omp for
+        for (int jj = 0; jj < params.nx; jj++)
+        {
+            /* if the cell is not occupied and
+             ** we don't send a negative density */
+            index = ii + jj;
+            
+            if (!obstacles[index]
+                && (cells[index].speeds[3] - w1) > 0.0
+                && (cells[index].speeds[6] - w2) > 0.0
+                && (cells[index].speeds[7] - w2) > 0.0)
+            {
+                /* increase 'east-side' densities */
+                cells[index].speeds[1] += w1;
+                cells[index].speeds[5] += w2;
+                cells[index].speeds[8] += w2;
+                /* decrease 'west-side' densities */
+                cells[index].speeds[3] -= w1;
+                cells[index].speeds[6] -= w2;
+                cells[index].speeds[7] -= w2;
+            }
+        }
+
 
   return EXIT_SUCCESS;
 }
