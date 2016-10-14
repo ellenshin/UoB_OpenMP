@@ -302,7 +302,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(index)
 
   for (int ii = 0; ii < params.ny; ii++)
   {
@@ -386,9 +386,9 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         /* relaxation step */
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
-          cells[ii * params.nx + jj].speeds[kk] = tmp_cells[ii * params.nx + jj].speeds[kk]
+          cells[index].speeds[kk] = tmp_cells[index].speeds[kk]
                                                   + params.omega
-                                                  * (d_equ[kk] - tmp_cells[ii * params.nx + jj].speeds[kk]);
+                                                  * (d_equ[kk] - tmp_cells[index].speeds[kk]);
         }
       }
     }
