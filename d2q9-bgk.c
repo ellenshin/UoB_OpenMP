@@ -204,29 +204,44 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
     /* modify the 2nd row of the grid */
     int ii = params.ny - 2;
     
-    for (int jj = 0; jj < params.nx; jj++)
+//#pragma omp parallel num_threads(2)
     {
+        for (int jj = 0; jj < params.nx; jj++)
         {
-        /* if the cell is not occupied and
-         ** we don't send a negative density */
-        if (!obstacles[ii * params.nx + jj]
-            && (cells[ii * params.nx + jj].speeds[3] - w1) > 0.0
-            && (cells[ii * params.nx + jj].speeds[6] - w2) > 0.0
-            && (cells[ii * params.nx + jj].speeds[7] - w2) > 0.0)
-        {
-            /* increase 'east-side' densities */
-            cells[ii * params.nx + jj].speeds[1] += w1;
-            cells[ii * params.nx + jj].speeds[5] += w2;
-            cells[ii * params.nx + jj].speeds[8] += w2;
-            /* decrease 'west-side' densities */
-            cells[ii * params.nx + jj].speeds[3] -= w1;
-            cells[ii * params.nx + jj].speeds[6] -= w2;
-            cells[ii * params.nx + jj].speeds[7] -= w2;
-        
+            {
+                /* if the cell is not occupied and
+                 ** we don't send a negative density */
+                if (!obstacles[ii * params.nx + jj]
+                    && (cells[ii * params.nx + jj].speeds[3] - w1) > 0.0
+                    && (cells[ii * params.nx + jj].speeds[6] - w2) > 0.0
+                    && (cells[ii * params.nx + jj].speeds[7] - w2) > 0.0)
+                {
+//#pragma omp sections
+                    {
+//#pragma omp section
+                        {
+                            cells[ii * params.nx + jj].speeds[1] += w1;
+                            cells[ii * params.nx + jj].speeds[5] += w2;
+                            cells[ii * params.nx + jj].speeds[8] += w2;
+                            
+                        }
+                        
+//#pragma omp section
+                        {
+                            cells[ii * params.nx + jj].speeds[3] -= w1;
+                            cells[ii * params.nx + jj].speeds[6] -= w2;
+                            cells[ii * params.nx + jj].speeds[7] -= w2;
+                        }
+                        /* decrease 'west-side' densities */
+                    }
+                    /* increase 'east-side' densities */
+                    
+                }
+            }
         }
-        }
+
     }
-    
+
     return EXIT_SUCCESS;
 }
 
@@ -304,14 +319,14 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
     int index;
     double *speed;
     t_speed* cell;
-    int chunk = (params.ny*params.nx) / 16;
+    //int chunk = (params.ny*params.nx) / 16;
   /* loop over the cells in the grid
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-#pragma omp parallel private(index, cell, speed) shared(chunk)
+#pragma omp parallel private(index, cell, speed)
 {
-#pragma omp for collapse(2) schedule(static, chunk)
+#pragma omp for collapse(2)
   for (int ii = 0; ii < params.ny; ii++)
   {
     for (int jj = 0; jj < params.nx; jj++)
@@ -417,7 +432,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
   tot_u = 0.0;
 
   /* loop over all non-blocked cells */
-//#pragma omp parallel for collapse(2) reduction(+:tot_u)
+#pragma omp parallel for collapse(2) reduction(+:tot_u, tot_cells)
   for (int ii = 0; ii < params.ny; ii++)
   {
     for (int jj = 0; jj < params.nx; jj++)
