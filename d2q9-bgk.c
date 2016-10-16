@@ -56,6 +56,8 @@
 #include<sys/time.h>
 #include<sys/resource.h>
 #include<omp.h>
+#include<stdbool.h>
+#include<string.h>
 
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
@@ -267,6 +269,7 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
 int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
     int index;
+    
   /* loop over the cells in the grid */
     #pragma omp parallel for collapse(2) private(index)
   for (int ii = 0; ii < params.ny; ii++)
@@ -305,11 +308,13 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
     double *speed;
     t_speed* cell;
     int chunk = (params.ny*params.nx) / 16;
+    t_speed* cell_array = malloc(chunk*sizeof(t_speed));
+    int number_of_cells = 0;
   /* loop over the cells in the grid
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-#pragma omp parallel private(index, cell, speed) shared(chunk)
+#pragma omp parallel private(index, cell, speed, cell_array) shared(chunk) firstprivate(number_of_cells)
 {
 #pragma omp for collapse(2) schedule(static, chunk)
   for (int ii = 0; ii < params.ny; ii++)
@@ -331,21 +336,9 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         }
 
         /* compute x velocity component */
-        double u_x = (*(speed+1)
-                      + *(speed+5)
-                      + *(speed+8)
-                      - (*(speed+3)
-                         + *(speed+6)
-                         + *(speed+7)))
-                     / local_density;
+        double u_x = (*(speed+1) + *(speed+5) + *(speed+8) - (*(speed+3) + *(speed+6) + *(speed+7))) / local_density;
         /* compute y velocity component */
-        double u_y = (*(speed+2)
-                      + *(speed+5)
-                      + *(speed+6)
-                      - (*(speed+4)
-                         + *(speed+7)
-                         + *(speed+8)))
-                     / local_density;
+        double u_y = (*(speed+2) + *(speed+5) + *(speed+6) - (*(speed+4) + *(speed+7) + *(speed+8))) / local_density;
 
         /* velocity squared */
         double u_sq = u_x * u_x + u_y * u_y;
@@ -367,42 +360,56 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         d_equ[0] = w0 * local_density
                    * (1.0 - u_sq / (2.0 * c_sq));
         /* axis speeds: weight w1 */
-        d_equ[1] = w1 * local_density * (1.0 + u[1] / c_sq
-                                         + (u[1] * u[1]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[2] = w1 * local_density * (1.0 + u[2] / c_sq
-                                         + (u[2] * u[2]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[3] = w1 * local_density * (1.0 + u[3] / c_sq
-                                         + (u[3] * u[3]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[4] = w1 * local_density * (1.0 + u[4] / c_sq
-                                         + (u[4] * u[4]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
+        d_equ[1] = w1 * local_density * (1.0 + u[1] / c_sq + (u[1] * u[1]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[2] = w1 * local_density * (1.0 + u[2] / c_sq + (u[2] * u[2]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[3] = w1 * local_density * (1.0 + u[3] / c_sq + (u[3] * u[3]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[4] = w1 * local_density * (1.0 + u[4] / c_sq + (u[4] * u[4]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
         /* diagonal speeds: weight w2 */
-        d_equ[5] = w2 * local_density * (1.0 + u[5] / c_sq
-                                         + (u[5] * u[5]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[6] = w2 * local_density * (1.0 + u[6] / c_sq
-                                         + (u[6] * u[6]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[7] = w2 * local_density * (1.0 + u[7] / c_sq
-                                         + (u[7] * u[7]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
-        d_equ[8] = w2 * local_density * (1.0 + u[8] / c_sq
-                                         + (u[8] * u[8]) / (2.0 * c_sq * c_sq)
-                                         - u_sq / (2.0 * c_sq));
+        d_equ[5] = w2 * local_density * (1.0 + u[5] / c_sq + (u[5] * u[5]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[6] = w2 * local_density * (1.0 + u[6] / c_sq + (u[6] * u[6]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[7] = w2 * local_density * (1.0 + u[7] / c_sq + (u[7] * u[7]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
+        d_equ[8] = w2 * local_density * (1.0 + u[8] / c_sq + (u[8] * u[8]) / (2.0 * c_sq * c_sq) - u_sq / (2.0 * c_sq));
  
         /* relaxation step */
+        //create their own cell array and the master thread put them together in the cells array
+
+          double speed_array[NSPEEDS];
+          //t_speed cell_element = malloc((sizeof(t_speed)));
+          //*(cell_element.speeds) = speed_array;
+          //*((*(cell_array + index)).speeds) = *speed_array;
+          //*(cell_array + index) = cell_element;
+
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
-          cells[index].speeds[kk] = *(speed+kk)
-                                                  + params.omega
-                                                  * (d_equ[kk] - *(speed+kk));
+           //*((*(cell_array + index)).speeds) = *speed_array;
+          //(*(cell_array + index)).speeds[kk] = *(speed+kk) + params.omega*(d_equ[kk] - *(speed+kk));
+            speed_array[kk] = *(speed+kk) + params.omega*(d_equ[kk] - *(speed+kk));
         }
+        
+          t_speed cell_element;
+          //memcpy(array1, array2, sizeof(array2));
+          memcpy(cell_element.speeds, speed_array, sizeof(cell_element.speeds));
+          //*(cell_element.speeds) = speed_array;
+          *(cell_array + index) = cell_element;
       }
     }
   }
+#pragma omp critical
+    {
+        bool started = false;
+        
+        for (int i = 0; i < (params.ny*params.nx); i++) {
+            if((cell_array + i)) {
+                started = true;
+                for(int k = 0; k < NSPEEDS; k++) {
+                    cells[i].speeds[k] = (*(cell_array+i)).speeds[k];
+                }
+            } else if(started == true) {
+                break;
+            }
+            
+        }
+    }
 }
 
   return EXIT_SUCCESS;
