@@ -406,6 +406,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
   tot_u = 0.0;
 
   /* loop over all non-blocked cells */
+//#pragma omp parallel for collapse(2) reduction(+:tot_u)
   for (int ii = 0; ii < params.ny; ii++)
   {
     for (int jj = 0; jj < params.nx; jj++)
@@ -636,6 +637,7 @@ double total_density(const t_param params, t_speed* cells)
 {
   double total = 0.0;  /* accumulator */
 
+#pragma omp parallel for collapse(3) reduction(+:total)
   for (int ii = 0; ii < params.ny; ii++)
   {
     for (int jj = 0; jj < params.nx; jj++)
