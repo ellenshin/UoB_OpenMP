@@ -57,6 +57,7 @@
 #include<sys/resource.h>
 #include<omp.h>
 
+#define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
@@ -78,6 +79,17 @@ typedef struct
 {
   double speeds[NSPEEDS];
 } t_speed;
+
+typedef struct
+{
+    double speeds[NSPEEDS];
+    int index;
+} cell_element;
+
+typedef struct
+{
+    cell_element* elements;
+} cell_array;
 
 /*
 ** function prototypes
@@ -290,9 +302,9 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
   return EXIT_SUCCESS;
 }
 
-void assign_cell_speed(t_speed* cells, int index, double* speed_array) {
-    *(cells[index].speeds) = *(speed_array);
-}
+//void assign_cell_speed(t_speed* cells, int index, double* speed_array) {
+//    *(cells[index].speeds) = *(speed_array);
+//}
 
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
@@ -301,12 +313,17 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   const double w1 = 1.0 / 9.0;  /* weighting factor */
   const double w2 = 1.0 / 36.0; /* weighting factor */
 
+  
     int index;
+    cell_array cell_array_in_threads;
+    cell_array* total_cell_array[16];
+    int ith_cell_element = 0;
+    
   /* loop over the cells in the grid
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-#pragma omp parallel private(index)
+#pragma omp parallel private(index, cell_array_in_threads) firstprivate(ith_cell_element)
 {
 #pragma omp for collapse(2)
   for (int ii = 0; ii < params.ny; ii++)
@@ -388,25 +405,39 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
                                          + (u[8] * u[8]) / (2.0 * c_sq * c_sq)
                                          - u_sq / (2.0 * c_sq));
 
-        /* relaxation step */
-          double cell_speed[NSPEEDS];
-//        for (int kk = 0; kk < NSPEEDS; kk++)
-//        {
-//          cells[index].speeds[kk] = tmp_cells[index].speeds[kk]
-//                                                  + params.omega
-//                                                  * (d_equ[kk] - tmp_cells[index].speeds[kk]);
-//        }
-          for (int kk = 0; kk < NSPEEDS; kk++) {
-              cell_speed[kk] = tmp_cells[index].speeds[kk] + params.omega * (d_equ[kk] - tmp_cells[index].speeds[kk]);
-
-          }
+          //initialize an element
+          cell_element element = {.speeds = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}, .index = 0};
+          //initialize a pointer to the cell array in thread
+          cell_array* array_ptr = &cell_array_in_threads;
           
-          assign_cell_speed(cells, index, cell_speed);
+          cell_element** elements_ptr = &((*array_ptr).elements);
+          *(elements_ptr + ith_cell_element) = &element;
+
+        /* relaxation step */
+        for (int kk = 0; kk < NSPEEDS; kk++)
+        {
+            cell_array_in_threads.elements[ith_cell_element].speeds[kk] = tmp_cells[index].speeds[kk]
+                                                  + params.omega
+                                                  * (d_equ[kk] - tmp_cells[index].speeds[kk]);
+        }
+          cell_array_in_threads.elements[ith_cell_element].index = index;//set the index number of where the speed should go to in cells array
+          ith_cell_element++;
       }
     }
   }
-}
+    *(total_cell_array + omp_get_thread_num()) = &cell_array_in_threads;
+} //END OF PARALLEL BLOCK
 
+    for(int i = 0; i < 16; i ++) {
+        cell_array* array = *(total_cell_array +i);
+        cell_element* array_of_elements = array->elements;
+        
+        int size_of_array = NELEMS(array_of_elements);
+        for(int j = 0; j < size_of_array; j++) {
+            int INDEX = array_of_elements[j].index;
+            *(cells[INDEX].speeds) = *(array_of_elements[j].speeds);
+        }
+     }
   return EXIT_SUCCESS;
 }
 
