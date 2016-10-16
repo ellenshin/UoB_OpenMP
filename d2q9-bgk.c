@@ -57,6 +57,7 @@
 #include<sys/resource.h>
 #include<omp.h>
 
+#define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
@@ -298,12 +299,16 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
   const double w2 = 1.0 / 36.0; /* weighting factor */
 
     int index;
+    double* array_of_speeds;
+    int ith_element_cell = 0;
   /* loop over the cells in the grid
   ** NB the collision step is called after
   ** the propagate step and so values of interest
   ** are in the scratch-space grid */
-#pragma omp parallel for collapse(2) private(index)
 
+#pragma omp parallel private(index, array_of_speeds) firstprivate(ith_element_cell)
+{
+#pragma omp for collapse(2)
   for (int ii = 0; ii < params.ny; ii++)
   {
     for (int jj = 0; jj < params.nx; jj++)
@@ -383,17 +388,31 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
                                          + (u[8] * u[8]) / (2.0 * c_sq * c_sq)
                                          - u_sq / (2.0 * c_sq));
 
+        double tmp_speeds[10] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+          
         /* relaxation step */
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
-          cells[index].speeds[kk] = tmp_cells[index].speeds[kk]
+          tmp_speeds[kk+1] = tmp_cells[index].speeds[kk]
                                                   + params.omega
                                                   * (d_equ[kk] - tmp_cells[index].speeds[kk]);
         }
+          //the first element is the index of where the speeds should end up in the grid
+          tmp_speeds[0] = (double)index;
+          *(array_of_speeds+ith_element_cell) = *(tmp_speeds);
+          ith_element_cell++;
       }
     }
   }
-
+    for(int i = 0; i < NELEMS(array_of_speeds); i++) {
+        double* array;
+        array = array_of_speeds;
+        int index_in_grid = (int)(*array);
+        for(int j = 0; j < NSPEEDS; j++) {
+            cells[index_in_grid].speeds[j] = *(array+j+1);
+        }
+    }
+  }//END OF PARALLEL
   return EXIT_SUCCESS;
 }
 
