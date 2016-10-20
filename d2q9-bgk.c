@@ -133,9 +133,9 @@ int main(int argc, char* argv[])
     double* av_vels   = NULL;     /* a record of the av. velocity computed for each timestep */
     struct timeval timstr;        /* structure to hold elapsed time */
     struct rusage ru;             /* structure to hold CPU time--system and user */
-    double tic, toc;              /* floating point numbers to calculate elapsed wallclock time */
-    double usrtim;                /* floating point number to record elapsed user CPU time */
-    double systim;                /* floating point number to record elapsed system CPU time */
+    double tic, toc;              /* doubleing point numbers to calculate elapsed wallclock time */
+    double usrtim;                /* doubleing point number to record elapsed user CPU time */
+    double systim;                /* doubleing point number to record elapsed system CPU time */
     
     /* parse the command line */
     if (argc != 3)
@@ -334,11 +334,11 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
      ** NB the collision step is called after
      ** the propagate step and so values of interest
      ** are in the scratch-space grid */
-    //#pragma omp parallel private(index)
+    #pragma omp parallel
     {
         int ii;
         int jj;
-#pragma omp parallel for collapse(2) private(ii, jj)
+#pragma omp for collapse(2) private(ii, jj)
         /* loop over _all_ cells */
         for (ii = 0; ii < params.ny; ii++)
         {
@@ -366,7 +366,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
             }
         }
         
-#pragma omp parallel for collapse(2) reduction(+: tot_cells, tot_u) private(ii, jj)
+#pragma omp for collapse(2) reduction(+: tot_cells, tot_u) private(ii, jj)
         for (ii = 0; ii < params.ny; ii++)
         {
             for (jj = 0; jj < params.nx; jj++)
@@ -450,7 +450,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     /* relaxation step */
                     for (kk = 0; kk < NSPEEDS; kk++)
                     {
-                        cells[ii * params.nx + jj].speeds[kk] = tmp_cells[index].speeds[kk]
+                        cells[index].speeds[kk] = tmp_cells[index].speeds[kk]
                         + params.omega
                         * (d_equ[kk] - tmp_cells[index].speeds[kk]);
                     }
@@ -460,24 +460,24 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     
                     for (kk = 0; kk < NSPEEDS; kk++)
                     {
-                        local_density += cells[ii * params.nx + jj].speeds[kk];
+                        local_density += cells[index].speeds[kk];
                     }
                     
                     /* x-component of velocity */
-                    u_x = (cells[ii * params.nx + jj].speeds[1]
-                           + cells[ii * params.nx + jj].speeds[5]
-                           + cells[ii * params.nx + jj].speeds[8]
-                           - (cells[ii * params.nx + jj].speeds[3]
-                              + cells[ii * params.nx + jj].speeds[6]
-                              + cells[ii * params.nx + jj].speeds[7]))
+                    u_x = (cells[index].speeds[1]
+                           + cells[index].speeds[5]
+                           + cells[index].speeds[8]
+                           - (cells[index].speeds[3]
+                              + cells[index].speeds[6]
+                              + cells[index].speeds[7]))
                     / local_density;
                     /* compute y velocity component */
-                    u_y = (cells[ii * params.nx + jj].speeds[2]
-                           + cells[ii * params.nx + jj].speeds[5]
-                           + cells[ii * params.nx + jj].speeds[6]
-                           - (cells[ii * params.nx + jj].speeds[4]
-                              + cells[ii * params.nx + jj].speeds[7]
-                              + cells[ii * params.nx + jj].speeds[8]))
+                    u_y = (cells[index].speeds[2]
+                           + cells[index].speeds[5]
+                           + cells[index].speeds[6]
+                           - (cells[index].speeds[4]
+                              + cells[index].speeds[7]
+                              + cells[index].speeds[8]))
                     / local_density;
                     /* accumulate the norm of x- and y- velocity components */
                     tot_u += sqrt((u_x * u_x) + (u_y * u_y));
@@ -500,7 +500,6 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 }
             }
         }
-        
         
     }
     
