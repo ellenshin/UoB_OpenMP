@@ -2,8 +2,8 @@
 
 EXE=d2q9-bgk
 
-CC=gcc
-CFLAGS= -std=c99 -Wall -O3 -DDEBUG -g -fopenmp -ffast-math -ffinite-math-only
+CC=icc
+CFLAGS= -qopenmp -fast
 LIBS = -lm
 
 FINAL_STATE_FILE=./final_state.dat
