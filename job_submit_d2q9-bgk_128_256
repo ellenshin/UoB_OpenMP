@@ -14,16 +14,12 @@
 application="./d2q9-bgk"
 
 #! Run options for the application
-options="input_256x256.params obstacles_256x256.dat"
-
-<<<<<<< HEAD
-=======
+options="input_128x256.params obstacles_128x256.dat"
 # load the VTune module
 module add intel-cluster-studio/vtune/vtune-2013
 
 #! Profile the executable
 amplxe-cl -quiet -collect hotspots -result-dir r001hs $application $options
->>>>>>> fa0d3f52838e0418f9a7e3b0ce5f27a349ccd4aa
 ###############################################################
 ### You should not have to change anything below this line ####
 ###############################################################
