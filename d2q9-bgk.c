@@ -373,9 +373,12 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
             {
                 /* don't consider occupied cells */
                 int index = ii * params.nx + jj;
+                double* tmp_speed = tmp_cells[index].speeds;
+                double* current_speed = cells[index].speeds;
                 if (!obstacles[index])
                 {
                     /* compute local density total */
+                    
                     double local_density = 0.0;
                     
                     int kk;
@@ -385,20 +388,20 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     }
                     
                     /* compute x velocity component */
-                    double u_x = (tmp_cells[index].speeds[1]
-                                  + tmp_cells[index].speeds[5]
-                                  + tmp_cells[index].speeds[8]
-                                  - (tmp_cells[index].speeds[3]
-                                     + tmp_cells[index].speeds[6]
-                                     + tmp_cells[index].speeds[7]))
+                    double u_x = (tmp_speed[1]
+                                  + tmp_speed[5]
+                                  + tmp_speed[8]
+                                  - (tmp_speed[3]
+                                     + tmp_speed[6]
+                                     + tmp_speed[7]))
                     / local_density;
                     /* compute y velocity component */
-                    double u_y = (tmp_cells[index].speeds[2]
-                                  + tmp_cells[index].speeds[5]
-                                  + tmp_cells[index].speeds[6]
-                                  - (tmp_cells[index].speeds[4]
-                                     + tmp_cells[index].speeds[7]
-                                     + tmp_cells[index].speeds[8]))
+                    double u_y = (tmp_speed[2]
+                                  + tmp_speed[5]
+                                  + tmp_speed[6]
+                                  - (tmp_speed[4]
+                                     + tmp_speed[7]
+                                     + tmp_speed[8]))
                     / local_density;
                     
                     /* velocity squared */
@@ -450,9 +453,9 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     /* relaxation step */
                     for (kk = 0; kk < NSPEEDS; kk++)
                     {
-                        cells[index].speeds[kk] = tmp_cells[index].speeds[kk]
+                        current_speed[kk] = tmp_speed[kk]
                         + params.omega
-                        * (d_equ[kk] - tmp_cells[index].speeds[kk]);
+                        * (d_equ[kk] - tmp_speed[kk]);
                     }
                     
                     /* local density total */
@@ -460,24 +463,24 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     
                     for (kk = 0; kk < NSPEEDS; kk++)
                     {
-                        local_density += cells[index].speeds[kk];
+                        local_density += current_speed[kk];
                     }
                     
                     /* x-component of velocity */
-                    u_x = (cells[index].speeds[1]
-                           + cells[index].speeds[5]
-                           + cells[index].speeds[8]
-                           - (cells[index].speeds[3]
-                              + cells[index].speeds[6]
-                              + cells[index].speeds[7]))
+                    u_x = (current_speed[1]
+                           + current_speed[5]
+                           + current_speed[8]
+                           - (current_speed[3]
+                              + current_speed[6]
+                              + current_speed[7]))
                     / local_density;
                     /* compute y velocity component */
-                    u_y = (cells[index].speeds[2]
-                           + cells[index].speeds[5]
-                           + cells[index].speeds[6]
-                           - (cells[index].speeds[4]
-                              + cells[index].speeds[7]
-                              + cells[index].speeds[8]))
+                    u_y = (current_speed[2]
+                           + current_speed[5]
+                           + current_speed[6]
+                           - (current_speed[4]
+                              + current_speed[7]
+                              + current_speed[8]))
                     / local_density;
                     /* accumulate the norm of x- and y- velocity components */
                     tot_u += sqrt((u_x * u_x) + (u_y * u_y));
@@ -488,14 +491,14 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 }else {
                     /* called after propagate, so taking values from scratch space
                      ** mirroring, and writing into main grid */
-                    cells[index].speeds[1] = tmp_cells[index].speeds[3];
-                    cells[index].speeds[2] = tmp_cells[index].speeds[4];
-                    cells[index].speeds[3] = tmp_cells[index].speeds[1];
-                    cells[index].speeds[4] = tmp_cells[index].speeds[2];
-                    cells[index].speeds[5] = tmp_cells[index].speeds[7];
-                    cells[index].speeds[6] = tmp_cells[index].speeds[8];
-                    cells[index].speeds[7] = tmp_cells[index].speeds[5];
-                    cells[index].speeds[8] = tmp_cells[index].speeds[6];
+                    current_speed[1] = tmp_speed[3];
+                    current_speed[2] = tmp_speed[4];
+                    current_speed[3] = tmp_speed[1];
+                    current_speed[4] = tmp_speed[2];
+                    current_speed[5] = tmp_speed[7];
+                    current_speed[6] = tmp_speed[8];
+                    current_speed[7] = tmp_speed[5];
+                    current_speed[8] = tmp_speed[6];
                     
                 }
             }
