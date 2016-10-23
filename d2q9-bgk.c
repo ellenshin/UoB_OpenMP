@@ -370,7 +370,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
             }
         }
         
-#pragma omp for collapse(2) reduction(+: tot_cells, tot_u) private(ii, jj) schedule(static)
+#pragma omp for collapse(2) reduction(+: tot_cells, tot_u) private(ii, jj) //schedule(static) 
         for (ii = 0; ii < params.ny; ii++)
         {
             for (jj = 0; jj < params.nx; jj++)
@@ -389,22 +389,12 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 double tmp_speed_6 = tmp_speed[6];
                 double tmp_speed_7 = tmp_speed[7];
                 double tmp_speed_8 = tmp_speed[8];
-                
-                double* current_speed_0 = current_speed;
-                double* current_speed_1 = (current_speed+1);
-                double* current_speed_2 = (current_speed+2);
-                double* current_speed_3 = (current_speed+3);
-                double* current_speed_4 = (current_speed+4);
-                double* current_speed_5 = (current_speed+5);
-                double* current_speed_6 = (current_speed+6);
-                double* current_speed_7 = (current_speed+7);
-                double* current_speed_8 = (current_speed+8);
-                
                 if (!obstacles[index])
                 {
                     /* compute local density total */
                     
                     //double local_density = 0.0;
+                    
                     
                     
                     //int kk;
@@ -485,30 +475,30 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
 //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
 //                    }
                     
-                    *current_speed_0 = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
                                                                       * (1.0 - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_0);
-                    *current_speed_1 = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
                                                                                             + (u_x * u_x) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_1);
-                    *current_speed_2 = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
                                                                                             + (u_y * u_y) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_2);
-                    *current_speed_3 = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
                                                                                             + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_3);
-                    *current_speed_4 = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
                                                                                             + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_4);
-                    *current_speed_5 = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
                                                                                             + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_5);
-                    *current_speed_6 = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
                                                                                             + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_6);
-                    *current_speed_7 = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
                                                                                             + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_7);
-                    *current_speed_8 = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
                                                                                             + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
                                                                                             - (u_x * u_x + u_y * u_y) / (two_c_sq))) - tmp_speed_8);
                     
@@ -546,14 +536,24 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 }else {
                     /* called after propagate, so taking values from scratch space
                      ** mirroring, and writing into main grid */
-                    *current_speed_1 = tmp_speed[3];
-                    *current_speed_2 = tmp_speed[4];
-                    *current_speed_3 = tmp_speed[1];
-                    *current_speed_4 = tmp_speed[2];
-                    *current_speed_5 = tmp_speed[7];
-                    *current_speed_6 = tmp_speed[8];
-                    *current_speed_7 = tmp_speed[5];
-                    *current_speed_8 = tmp_speed[6];
+                    double* current_speed_0 = current_speed;
+                    double* current_speed_1 = (current_speed+1);
+                    double* current_speed_2 = (current_speed+2);
+                    double* current_speed_3 = (current_speed+3);
+                    double* current_speed_4 = (current_speed+4);
+                    double* current_speed_5 = (current_speed+5);
+                    double* current_speed_6 = (current_speed+6);
+                    double* current_speed_7 = (current_speed+7);
+                    double* current_speed_8 = (current_speed+8);
+                    
+                    *(current_speed+1) = tmp_speed[3];
+                    *(current_speed+2) = tmp_speed[4];
+                    *(current_speed+3) = tmp_speed[1];
+                    *(current_speed+4) = tmp_speed[2];
+                    *(current_speed+5) = tmp_speed[7];
+                    *(current_speed+6) = tmp_speed[8];
+                    *(current_speed+7) = tmp_speed[5];
+                    *(current_speed+8) = tmp_speed[6];
                     
                 }
             }
