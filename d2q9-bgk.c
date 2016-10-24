@@ -340,15 +340,17 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
     {
         int ii;
         int jj;
-#pragma omp for collapse(2) private(ii, jj)
+        int index;
+        double* current_speed;
+#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
         /* loop over _all_ cells */
         for (ii = 0; ii < params.ny; ii++)
         {
-            for (jj = 0; jj < params.nx; jj++)
+            for (jj = 0; jj < params.nx; jj+=4)
             {
                 
-                int index = ii * params.nx + jj;
-                double* current_speed = cells[index].speeds;
+                index = ii * params.nx + jj;
+                current_speed = cells[index].speeds;
                 /* determine indices of axis-direction neighbours
                  ** respecting periodic boundary conditions (wrap around) */
                 int y_n = (ii + 1) % params.ny;
@@ -367,6 +369,70 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 tmp_cells[y_n * params.nx + x_w].speeds[6] = current_speed[6]; /* north-west */
                 tmp_cells[y_s * params.nx + x_w].speeds[7] = current_speed[7]; /* south-west */
                 tmp_cells[y_s * params.nx + x_e].speeds[8] = current_speed[8]; /* south-east */
+                
+                //index = ii * params.nx + jj+1;
+                current_speed = cells[index+1].speeds;
+                /* determine indices of axis-direction neighbours
+                 ** respecting periodic boundary conditions (wrap around) */
+                //y_n = (ii + 1) % params.ny;
+                x_e = (jj + 2) % params.nx;
+                //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                x_w = (jj + 1 - 1);
+//                * propagate densities to neighbouring cells, following
+//                 ** appropriate directions of travel and writing into
+//                 ** scratch space grid */
+                tmp_cells[ii * params.nx + jj+ 1].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                tmp_cells[ii * params.nx + x_e].speeds[1] = current_speed[1]; /* east */
+                tmp_cells[y_n * params.nx + jj+ 1].speeds[2]  = current_speed[2]; /* north */
+                tmp_cells[ii * params.nx + x_w].speeds[3] = current_speed[3]; /* west */
+                tmp_cells[y_s * params.nx + jj+ 1].speeds[4]  = current_speed[4]; /* south */
+                tmp_cells[y_n * params.nx + x_e].speeds[5] = current_speed[5]; /* north-east */
+                tmp_cells[y_n * params.nx + x_w].speeds[6] = current_speed[6]; /* north-west */
+                tmp_cells[y_s * params.nx + x_w].speeds[7] = current_speed[7]; /* south-west */
+                tmp_cells[y_s * params.nx + x_e].speeds[8] = current_speed[8]; /* south-east */
+
+
+                current_speed = cells[index+2].speeds;
+                /* determine indices of axis-direction neighbours
+                 ** respecting periodic boundary conditions (wrap around) */
+                //y_n = (ii + 1) % params.ny;
+                x_e = (jj + 3) % params.nx;
+                //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                x_w = (jj + 2 - 1);
+                //                * propagate densities to neighbouring cells, following
+                //                 ** appropriate directions of travel and writing into
+                //                 ** scratch space grid */
+                tmp_cells[ii * params.nx + jj+ 2].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                tmp_cells[ii * params.nx + x_e].speeds[1] = current_speed[1]; /* east */
+                tmp_cells[y_n * params.nx + jj+ 2].speeds[2]  = current_speed[2]; /* north */
+                tmp_cells[ii * params.nx + x_w].speeds[3] = current_speed[3]; /* west */
+                tmp_cells[y_s * params.nx + jj+ 2].speeds[4]  = current_speed[4]; /* south */
+                tmp_cells[y_n * params.nx + x_e].speeds[5] = current_speed[5]; /* north-east */
+                tmp_cells[y_n * params.nx + x_w].speeds[6] = current_speed[6]; /* north-west */
+                tmp_cells[y_s * params.nx + x_w].speeds[7] = current_speed[7]; /* south-west */
+                tmp_cells[y_s * params.nx + x_e].speeds[8] = current_speed[8]; /* south-east */
+                
+                current_speed = cells[index+3].speeds;
+                /* determine indices of axis-direction neighbours
+                 ** respecting periodic boundary conditions (wrap around) */
+                //y_n = (ii + 1) % params.ny;
+                x_e = (jj + 4) % params.nx;
+                //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                x_w = (jj + 3 - 1);
+                //                * propagate densities to neighbouring cells, following
+                //                 ** appropriate directions of travel and writing into
+                //                 ** scratch space grid */
+                tmp_cells[ii * params.nx + jj+ 3].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                tmp_cells[ii * params.nx + x_e].speeds[1] = current_speed[1]; /* east */
+                tmp_cells[y_n * params.nx + jj+ 3].speeds[2]  = current_speed[2]; /* north */
+                tmp_cells[ii * params.nx + x_w].speeds[3] = current_speed[3]; /* west */
+                tmp_cells[y_s * params.nx + jj+ 3].speeds[4]  = current_speed[4]; /* south */
+                tmp_cells[y_n * params.nx + x_e].speeds[5] = current_speed[5]; /* north-east */
+                tmp_cells[y_n * params.nx + x_w].speeds[6] = current_speed[6]; /* north-west */
+                tmp_cells[y_s * params.nx + x_w].speeds[7] = current_speed[7]; /* south-west */
+                tmp_cells[y_s * params.nx + x_e].speeds[8] = current_speed[8]; /* south-east */
+
+
             }
         }
         
@@ -528,7 +594,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                               + current_speed[8]))
                     / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
                     /* accumulate the norm of x- and y- velocity components */
-                    tot_u += sqrt((pow(u_x, 2.0) + (pow(u_y, 2.0))));
+                    tot_u += sqrt(u_x*u_x + u_y*u_y);
                     /* increase counter of inspected cells */
                     //++tot_cells;
                     
