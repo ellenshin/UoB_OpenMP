@@ -528,7 +528,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                               + current_speed[8]))
                     / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
                     /* accumulate the norm of x- and y- velocity components */
-                    tot_u += (pow(u_x, 2.0) + (pow(u_y, 2.0)));
+                    tot_u += sqrt((pow(u_x, 2.0) + (pow(u_y, 2.0))));
                     /* increase counter of inspected cells */
                     ++tot_cells;
                     
@@ -536,15 +536,15 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 }else {
                     /* called after propagate, so taking values from scratch space
                      ** mirroring, and writing into main grid */
-                    double* current_speed_0 = current_speed;
-                    double* current_speed_1 = (current_speed+1);
-                    double* current_speed_2 = (current_speed+2);
-                    double* current_speed_3 = (current_speed+3);
-                    double* current_speed_4 = (current_speed+4);
-                    double* current_speed_5 = (current_speed+5);
-                    double* current_speed_6 = (current_speed+6);
-                    double* current_speed_7 = (current_speed+7);
-                    double* current_speed_8 = (current_speed+8);
+//                    double* current_speed_0 = current_speed;
+//                    double* current_speed_1 = (current_speed+1);
+//                    double* current_speed_2 = (current_speed+2);
+//                    double* current_speed_3 = (current_speed+3);
+//                    double* current_speed_4 = (current_speed+4);
+//                    double* current_speed_5 = (current_speed+5);
+//                    double* current_speed_6 = (current_speed+6);
+//                    double* current_speed_7 = (current_speed+7);
+//                    double* current_speed_8 = (current_speed+8);
                     
                     *(current_speed+1) = tmp_speed[3];
                     *(current_speed+2) = tmp_speed[4];
@@ -561,7 +561,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
         
     }
     
-    return sqrt(tot_u) / (double)tot_cells;
+    return tot_u / (double)tot_cells;
     
 }
 
