@@ -336,7 +336,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
      ** NB the collision step is called after
      ** the propagate step and so values of interest
      ** are in the scratch-space grid */
-    #pragma omp parallel
+    #pragma omp parallel proc_bind(close)
     {
         int ii;
         int jj;
@@ -436,7 +436,9 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
             }
         }
         
-#pragma omp for collapse(2) reduction(+: tot_cells, tot_u) private(ii, jj) //schedule(static) 
+        int local_cells = 0;
+        double local_u = 0.0;
+#pragma omp for collapse(2) private(ii, jj) nowait //schedule(static)
         for (ii = 0; ii < params.ny; ii++)
         {
             for (jj = 0; jj < params.nx; jj++)
@@ -455,6 +457,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 double tmp_speed_6 = tmp_speed[6];
                 double tmp_speed_7 = tmp_speed[7];
                 double tmp_speed_8 = tmp_speed[8];
+                
                 if (!obstacles[index])
                 {
                     /* compute local density total */
@@ -594,7 +597,9 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                               + current_speed[8]))
                     / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
                     /* accumulate the norm of x- and y- velocity components */
-                    tot_u += sqrt(u_x*u_x + u_y*u_y);
+                    double u = u_x*u_x + u_y*u_y;
+                    
+                    local_u += sqrt(u);
                     /* increase counter of inspected cells */
                     //++tot_cells;
                     
@@ -620,11 +625,17 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     *(current_speed+6) = tmp_speed[8];
                     *(current_speed+7) = tmp_speed[5];
                     *(current_speed+8) = tmp_speed[6];
-                    ++tot_cells;
+                    ++local_cells;
                     
                 }
             }
         }
+        
+#pragma omp atomic
+        tot_u += local_u;
+        
+#pragma omp atomic
+        tot_cells += local_cells;
         
     }
     
@@ -632,18 +643,39 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
     
 }
 
+//void improve_reduction() {
+//    <type> my_global_sum = 0;
+//    /* The parallel part of your Algorithm: k-threads works here */
+//#pragma omp parallel
+//    {
+//        <type> my_local_sum = 0;
+//#pragma omp for nowait
+//        for(int i = 0; i < N; ++i) {
+//            <type> formula = f(i);
+//            my_local_sum += formula;
+//        }
+//#pragma omp atomic
+//        my_global_sum += my_local_sum;
+//    }
+//    /* The serial part of your Algorithm: 1-thread works here */
+//    my_final_result = g(my_global_sum);
+//}
+
 double av_velocity(const t_param params, t_speed* cells, int* obstacles)
 {
     int    tot_cells = 0;  /* no. of cells used in calculation */
-    double tot_u;          /* accumulated magnitudes of velocity for each cell */
+    double tot_u = 0.0;          /* accumulated magnitudes of velocity for each cell */
     
     /* initialise */
-    tot_u = 0.0;
     
     int ii;
     int jj;
     /* loop over all non-blocked cells */
-#pragma omp parallel for collapse(2) reduction(+:tot_u, tot_cells) private(ii, jj)
+#pragma omp parallel
+    {
+        int local_cells =0;
+        double local_u=0.0;
+#pragma omp for collapse(2) private(ii, jj) nowait
     for (ii = 0; ii < params.ny; ii++)
     {
         for (jj = 0; jj < params.nx; jj++)
@@ -669,17 +701,25 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
                           + current_speed[8]))
                 / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
                 /* accumulate the norm of x- and y- velocity components */
-                tot_u += sqrt((pow(u_x, 2.0) + (pow(u_y, 2.0))));
+                double u = u_x*u_x + u_y*u_y;
+                local_u += sqrt(u);
                 /* increase counter of inspected cells */
                 //++tot_cells;
                 /* increase counter of inspected cells */
                 
-                ++tot_cells;
-            }
+               
+            } else
+                ++local_cells;
         }
     }
+#pragma omp atomic
+        tot_u += local_u;
+        
+#pragma omp atomic
+        tot_cells += local_cells;
+    }
     
-    return tot_u / (double)tot_cells;
+    return tot_u / (double)(params.ny*params.nx-tot_cells);
 }
 
 int initialise(const char* paramfile, const char* obstaclefile,
