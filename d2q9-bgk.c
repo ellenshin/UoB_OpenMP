@@ -530,7 +530,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     /* accumulate the norm of x- and y- velocity components */
                     tot_u += sqrt((pow(u_x, 2.0) + (pow(u_y, 2.0))));
                     /* increase counter of inspected cells */
-                    ++tot_cells;
+                    //++tot_cells;
                     
                     
                 }else {
@@ -554,6 +554,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     *(current_speed+6) = tmp_speed[8];
                     *(current_speed+7) = tmp_speed[5];
                     *(current_speed+8) = tmp_speed[6];
+                    ++tot_cells;
                     
                 }
             }
@@ -561,7 +562,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
         
     }
     
-    return tot_u / (double)tot_cells;
+    return tot_u / (double)(params.ny*params.nx-tot_cells);
     
 }
 
