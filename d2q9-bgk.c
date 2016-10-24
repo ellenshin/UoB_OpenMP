@@ -438,15 +438,13 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
         
         int local_cells = 0;
         double local_u = 0.0;
-#pragma omp for collapse(2) private(ii, jj) nowait //schedule(static)
-        for (ii = 0; ii < params.ny; ii++)
+#pragma omp for private(ii, jj) nowait //schedule(static)
+        for (ii = 0; ii < params.ny*params.nx; ii++)
         {
-            for (jj = 0; jj < params.nx; jj++)
-            {
                 /* don't consider occupied cells */
-                int index = ii * params.nx + jj;
-                double* tmp_speed = tmp_cells[index].speeds;
-                double* current_speed = cells[index].speeds;
+            
+                double* tmp_speed = tmp_cells[ii].speeds;
+                double* current_speed = cells[ii].speeds;
                 
                 double tmp_speed_0 = tmp_speed[0];
                 double tmp_speed_1 = tmp_speed[1];
@@ -458,7 +456,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                 double tmp_speed_7 = tmp_speed[7];
                 double tmp_speed_8 = tmp_speed[8];
                 
-                if (!obstacles[index])
+                if (!obstacles[ii])
                 {
                     /* compute local density total */
                     
@@ -629,7 +627,6 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     
                 }
             }
-        }
         
 #pragma omp atomic
         tot_u += local_u;
@@ -675,16 +672,14 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
     {
         int local_cells =0;
         double local_u=0.0;
-#pragma omp for collapse(2) private(ii, jj) nowait
-    for (ii = 0; ii < params.ny; ii++)
+#pragma omp for private(ii, jj) nowait
+    for (ii = 0; ii < params.ny*params.nx; ii++)
     {
-        for (jj = 0; jj < params.nx; jj++)
-        {
             /* ignore occupied cells */
-            if (!obstacles[ii * params.nx + jj])
+            if (!obstacles[ii])
             {
                 /* local density total */
-                double* current_speed = cells[ii * params.nx + jj].speeds;
+                double* current_speed = cells[ii].speeds;
                 double u_x = (current_speed[1]
                        + current_speed[5]
                        + current_speed[8]
@@ -710,7 +705,7 @@ double av_velocity(const t_param params, t_speed* cells, int* obstacles)
                
             } else
                 ++local_cells;
-        }
+        
     }
 #pragma omp atomic
         tot_u += local_u;
