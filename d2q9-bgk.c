@@ -583,21 +583,21 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     
                     //local_density = current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8];
                     /* x-component of velocity */
-                    u_x = (current_speed[1]
+                    u_x = abs((current_speed[1]
                            + current_speed[5]
                            + current_speed[8]
                            - (current_speed[3]
                               + current_speed[6]
                               + current_speed[7]))
-                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]));
                     /* compute y velocity component */
-                    u_y = (current_speed[2]
+                    u_y = abs((current_speed[2]
                            + current_speed[5]
                            + current_speed[6]
                            - (current_speed[4]
                               + current_speed[7]
                               + current_speed[8]))
-                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]));
                     /* accumulate the norm of x- and y- velocity components */
                     double u = u_x*u_x + u_y*u_y;
                     
