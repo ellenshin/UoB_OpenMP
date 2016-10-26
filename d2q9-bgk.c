@@ -169,12 +169,12 @@ int main(int argc, char* argv[])
         //    double *speed;
         //    t_speed* cell;
         
-        int    tot_cells = 0;  /* no. of cells used in calculation */
+        int    tot_cells_1 = 0;  /* no. of cells used in calculation */
         double tot_u;          /* accumulated magnitudes of velocity for each cell */
-        
+        double first_vel;
         /* initialise */
         tot_u = 0.0;
-#pragma omp parallel proc_bind(close)
+#pragma omp parallel proc_bind(close) shared(av_vels)
         {
 #pragma omp master
             {
@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
                     
                     local_u += sqrt(u);
                     /* increase counter of inspected cells */
-                    //++tot_cells;
+                    //++tot_cells_1;
                     
                     
                 }else {
@@ -531,12 +531,13 @@ int main(int argc, char* argv[])
             tot_u += local_u;
             
 #pragma omp atomic
-            tot_cells += local_cells;
+            tot_cells_1 += local_cells;
             
         }
-        
-        av_vels[tt] = tot_u / (double)(params.ny*params.nx-tot_cells);
+        first_vel = first_vel = tot_u / (double)(params.ny*params.nx-tot_cells_1);
+        av_vels[tt] = first_vel;
 
+        
         //propagate(params, cells, tmp_cells);
         //av_vels[tt] = collision(params, cells, tmp_cells, obstacles);
 #ifdef DEBUG
@@ -703,10 +704,10 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
     //    t_speed* cell;
     
     int    tot_cells = 0;  /* no. of cells used in calculation */
-    double tot_u;          /* accumulated magnitudes of velocity for each cell */
+    double tot_u_1;          /* accumulated magnitudes of velocity for each cell */
     
     /* initialise */
-    tot_u = 0.0;
+    tot_u_1 = 0.0;
     
     //int chunk = (params.ny*params.nx) / 16;
     /* loop over the cells in the grid
@@ -1010,14 +1011,14 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
             }
         
 #pragma omp atomic
-        tot_u += local_u;
+        tot_u_1 += local_u;
         
 #pragma omp atomic
         tot_cells += local_cells;
         
     }
     
-    return tot_u / (double)(params.ny*params.nx-tot_cells);
+    return tot_u_1 / (double)(params.ny*params.nx-tot_cells);
     
 }
 
