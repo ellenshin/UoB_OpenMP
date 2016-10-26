@@ -158,51 +158,6 @@ int main(int argc, char* argv[])
     int tt;
     for (tt = 0; tt < params.maxIters; tt++)
     {
-        //timestep(params, cells, tmp_cells, obstacles);
-        double w3 = params.density * params.accel / 9.0;
-        double w4 = params.density * params.accel / 36.0;
-        
-        /* modify the 2nd row of the grid */
-        int ii = params.ny - 2;
-        int jj;
-        //#pragma omp parallel num_threads(2)
-        {
-            for (jj = 0; jj < params.nx; jj++)
-            {
-                {
-                    /* if the cell is not occupied and
-                     ** we don't send a negative density */
-                    if (!obstacles[ii * params.nx + jj]
-                        && (cells[ii * params.nx + jj].speeds[3] - w3) > 0.0
-                        && (cells[ii * params.nx + jj].speeds[6] - w4) > 0.0
-                        && (cells[ii * params.nx + jj].speeds[7] - w4) > 0.0)
-                    {
-                        //#pragma omp sections
-                        {
-                            //#pragma omp section
-                            {
-                                cells[ii * params.nx + jj].speeds[1] += w3;
-                                cells[ii * params.nx + jj].speeds[5] += w4;
-                                cells[ii * params.nx + jj].speeds[8] += w4;
-                                
-                            }
-                            
-                            //#pragma omp section
-                            {
-                                cells[ii * params.nx + jj].speeds[3] -= w3;
-                                cells[ii * params.nx + jj].speeds[6] -= w4;
-                                cells[ii * params.nx + jj].speeds[7] -= w4;
-                            }
-                            /* decrease 'west-side' densities */
-                        }
-                        /* increase 'east-side' densities */
-                        
-                    }
-                }
-            }
-            
-        }
-
         const double c_sq = 1.0 / 3.0; /* square of speed of sound */
         const double w0 = 4.0 / 9.0;  /* weighting factor */
         const double w1 = 1.0 / 9.0;  /* weighting factor */
@@ -219,14 +174,65 @@ int main(int argc, char* argv[])
         
         /* initialise */
         tot_u = 0.0;
+#pragma omp parallel proc_bind(close)
+        {
+#pragma omp master
+            {
+                double w3 = params.density * params.accel / 9.0;
+                double w4 = params.density * params.accel / 36.0;
+                
+                /* modify the 2nd row of the grid */
+                int ii = params.ny - 2;
+                int jj;
+                //#pragma omp parallel num_threads(2)
+                {
+                    for (jj = 0; jj < params.nx; jj++)
+                    {
+                        {
+                            /* if the cell is not occupied and
+                             ** we don't send a negative density */
+                            if (!obstacles[ii * params.nx + jj]
+                                && (cells[ii * params.nx + jj].speeds[3] - w3) > 0.0
+                                && (cells[ii * params.nx + jj].speeds[6] - w4) > 0.0
+                                && (cells[ii * params.nx + jj].speeds[7] - w4) > 0.0)
+                            {
+                                //#pragma omp sections
+                                
+                                //#pragma omp section
+                                
+                                cells[ii * params.nx + jj].speeds[1] += w3;
+                                cells[ii * params.nx + jj].speeds[5] += w4;
+                                cells[ii * params.nx + jj].speeds[8] += w4;
+                                
+                                
+                                
+                                //#pragma omp section
+                                
+                                cells[ii * params.nx + jj].speeds[3] -= w3;
+                                cells[ii * params.nx + jj].speeds[6] -= w4;
+                                cells[ii * params.nx + jj].speeds[7] -= w4;
+                                
+                                /* decrease 'west-side' densities */
+                                
+                                /* increase 'east-side' densities */
+                                
+                            }
+                        }
+                    }
+                    
+                }
+                
+
+            }
+        //timestep(params, cells, tmp_cells, obstacles);
+        
         
         //int chunk = (params.ny*params.nx) / 16;
         /* loop over the cells in the grid
          ** NB the collision step is called after
          ** the propagate step and so values of interest
          ** are in the scratch-space grid */
-#pragma omp parallel proc_bind(close)
-        {
+
             int ii;
             int jj;
             int index;
