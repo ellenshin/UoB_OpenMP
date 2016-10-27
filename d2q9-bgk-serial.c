@@ -222,13 +222,13 @@ int main(int argc, char* argv[])
              ** the propagate step and so values of interest
              ** are in the scratch-space grid */
 
-#pragma omp parallel proc_bind(close)
+//#pragma omp parallel proc_bind(close)
             {
                 int ii;
                 int jj;
                 unsigned int index;
                 double* current_speed;
-#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
+//#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
                 /* loop over _all_ cells */
                 for (ii = 0; ii < params.ny; ii++)
                 {
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
                 
                 unsigned int local_cells = 0;
                 double local_u = 0.0;
-#pragma omp for private(ii, jj) nowait //schedule(static)
+//#pragma omp for private(ii, jj) nowait //schedule(static)
                 for (ii = 0; ii < params.ny*params.nx; ii+=1)
                 {
                     /* don't consider occupied cells */
@@ -523,10 +523,10 @@ int main(int argc, char* argv[])
                     }
                 }
                 
-#pragma omp atomic
+//#pragma omp atomic
                 tot_u += local_u;
                 
-#pragma omp atomic
+//#pragma omp atomic
                 tot_cells += local_cells;
                 
             }
