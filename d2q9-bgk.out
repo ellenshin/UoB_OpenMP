@@ -1,12 +1,12 @@
 Error: Cannot find application file "./d2q9-bgk".
-Running on host node31-029
-Time is Thu Oct 27 12:59:32 BST 2016
+Running on host node31-031
+Time is Thu Oct 27 14:06:21 BST 2016
 Directory is /panfs/panasas01/intl/hs16844/UoB-HPC-LBM-2016
-PBS job ID is 5012127.master.cm.cluster
+PBS job ID is 5012481.master.cm.cluster
 This jobs runs on the following machines:
-node31-029
+node31-031
 ==done==
 Reynolds number:		1.007703420249E+01
-Elapsed time:			21.221872 (s)
-Elapsed user CPU time:		338.158592 (s)
-Elapsed system CPU time:	0.438933 (s)
+Elapsed time:			21.293539 (s)
+Elapsed user CPU time:		339.270423 (s)
+Elapsed system CPU time:	0.225965 (s)
