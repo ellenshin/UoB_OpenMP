@@ -545,31 +545,32 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
 //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
 //                    }
                     double local_density_mult = (u_x * u_x + u_y * u_y) / (two_c_sq);
-                    
-                    *(current_speed) = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                    double w1_loc = (w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]));
+                    double w2_loc = w1_loc/4.0;
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0* (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
                                                                       * (1.0 - local_density_mult)) - tmp_speed_0);
-                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1_loc * (1.0 + u_x / c_sq
                                                                                             + (u_x * u_x) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_1);
-                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1_loc * (1.0 + u_y / c_sq
                                                                                             + (u_y * u_y) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_2);
-                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1_loc * (1.0 + (-u_x) / c_sq
                                                                                             + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_3);
-                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1_loc * (1.0 + (-u_y) / c_sq
                                                                                             + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_4);
-                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2_loc * (1.0 + (u_x + u_y) / c_sq
                                                                                             + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_5);
-                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2_loc * (1.0 + (- u_x + u_y) / c_sq
                                                                                             + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_6);
-                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2_loc * (1.0 + (- u_x - u_y) / c_sq
                                                                                             + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_7);
-                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2_loc * (1.0 + ( u_x - u_y) / c_sq
                                                                                             + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
                                                                                             - local_density_mult)) - tmp_speed_8);
                     
@@ -601,7 +602,7 @@ double collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* 
                     /* accumulate the norm of x- and y- velocity components */
                     double u = u_x*u_x + u_y*u_y;
                     
-                    local_u += sqrt(u);
+                    local_u = local_u + sqrt(u);
                     /* increase counter of inspected cells */
                     //++tot_cells;
                     
