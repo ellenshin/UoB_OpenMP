@@ -155,41 +155,52 @@ int main(int argc, char* argv[])
     gettimeofday(&timstr, NULL);
     tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
     
+    const double c_sq = 3.0; /* square of speed of sound */
+    const double w0 = 4.0 / 9.0;  /* weighting factor */
+    const double w1 = 1.0 / 9.0;  /* weighting factor */
+    const double w2 = 1.0 / 36.0; /* weighting factor */
+    
+    const double two_c_sq_c_sq = 4.5;
+    const double two_c_sq = 1.5;
+    
+    double w3 = params.density * params.accel / 9.0;
+    double w4 = params.density * params.accel / 36.0;
+    
     int tt;
-    for (tt = 0; tt < params.maxIters; tt+=3)
+    for (tt = 0; tt < params.maxIters; tt+=4)
     {
-        const double c_sq = 1.0 / 3.0; /* square of speed of sound */
-        const double w0 = 4.0 / 9.0;  /* weighting factor */
-        const double w1 = 1.0 / 9.0;  /* weighting factor */
-        const double w2 = 1.0 / 36.0; /* weighting factor */
         
-        const double two_c_sq_c_sq = 2.0*c_sq*c_sq;
-        const double two_c_sq = 2.0*c_sq;
-        
-        double w3 = params.density * params.accel / 9.0;
-        double w4 = params.density * params.accel / 36.0;
         //int index;
         //    double *speed;
         //    t_speed* cell;
+
         
         int    tot_cells_1 = 0;  /* no. of cells used in calculation */
-        double tot_u_1;          /* accumulated magnitudes of velocity for each cell */
-        double first_vel;
+        double tot_u_1 = 0.0;          /* accumulated magnitudes of velocity for each cell */
+        //double first_vel;
         /* initialise */
-        tot_u_1 = 0.0;
+        //tot_u_1 = 0.0;
         
         int    tot_cells_2 = 0;  /* no. of cells used in calculation */
-        double tot_u_2;          /* accumulated magnitudes of velocity for each cell */
-        double second_vel;
+        double tot_u_2 = 0.0;          /* accumulated magnitudes of velocity for each cell */
+        //double second_vel;
         /* initialise */
-        tot_u_2 = 0.0;
+        //tot_u_2 = 0.0;
         
         int    tot_cells_3 = 0;  /* no. of cells used in calculation */
-        double tot_u_3;          /* accumulated magnitudes of velocity for each cell */
-        double third_vel;
+        double tot_u_3 = 0.0;          /* accumulated magnitudes of velocity for each cell */
+        //double third_vel;
         /* initialise */
-        tot_u_3 = 0.0;
-#pragma omp parallel proc_bind(close) shared(av_vels)
+        //tot_u_3 = 0.0;
+        
+        int    tot_cells_4 = 0;  /* no. of cells used in calculation */
+        double tot_u_4 = 0.0;          /* accumulated magnitudes of velocity for each cell */
+        //double third_vel;
+        /* initialise */
+        //tot_u_3 = 0.0;
+        
+        
+#pragma omp parallel proc_bind(close) //shared(av_vels)
         {
 #pragma omp master
             {
@@ -249,17 +260,15 @@ int main(int argc, char* argv[])
 
             int ii;
             int jj;
-            int index;
-            double* current_speed;
-#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
+#pragma omp for collapse(2) private(ii, jj) schedule(static)
             /* loop over _all_ cells */
             for (ii = 0; ii < params.ny; ii++)
             {
                 for (jj = 0; jj < params.nx; jj+=4)
                 {
                     
-                    index = ii * params.nx + jj;
-                    current_speed = cells[index].speeds;
+                    int index = ii * params.nx + jj;
+                    double* current_speed = cells[index].speeds;
                     /* determine indices of axis-direction neighbours
                      ** respecting periodic boundary conditions (wrap around) */
                     int y_n = (ii + 1) % params.ny;
@@ -350,7 +359,7 @@ int main(int argc, char* argv[])
             
             int local_cells = 0;
             double local_u = 0.0;
-#pragma omp for private(ii, jj) nowait //schedule(static)
+#pragma omp for private(ii, jj) //schedule(static)
             for (ii = 0; ii < params.ny*params.nx; ii++)
             {
                 /* don't consider occupied cells */
@@ -453,37 +462,37 @@ int main(int argc, char* argv[])
                     //                    {
                     //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
                     //                    }
-                    double local_density_mult = (u_x * u_x + u_y * u_y) / (two_c_sq);
+                    double local_density_mult = (u_x * u_x + u_y * u_y) * (two_c_sq);
+                    double w1_loc = (w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]));
+                    double w2_loc = w1_loc/4.0;
                     
-                    *(current_speed) = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                    
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0* (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
                                                                       * (1.0 - local_density_mult)) - tmp_speed_0);
-                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
-                                                                                                                                                                                                                       + (u_x * u_x) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_1);
-                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
-                                                                                                                                                                                                                       + (u_y * u_y) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_2);
-                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
-                                                                                                                                                                                                                       + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_3);
-                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
-                                                                                                                                                                                                                       + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_4);
-                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_5);
-                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_6);
-                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_7);
-                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_8);
-                    
-                    /* local density total */
-                    //local_density = 0.0;
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1_loc * (1.0 + u_x * c_sq
+                                                                                  + (u_x * u_x) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_1);
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1_loc * (1.0 + u_y * c_sq
+                                                                                  + (u_y * u_y) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_2);
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1_loc * (1.0 + (-u_x) * c_sq
+                                                                                  + ((-u_x) * (-u_x)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_3);
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1_loc * (1.0 + (-u_y) * c_sq
+                                                                                  + ((-u_y) * (-u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_4);
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2_loc * (1.0 + (u_x + u_y) * c_sq
+                                                                                  + ((u_x + u_y) * (u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_5);
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2_loc * (1.0 + (- u_x + u_y) * c_sq
+                                                                                  + ((- u_x + u_y) * (- u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_6);
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2_loc * (1.0 + (- u_x - u_y) * c_sq
+                                                                                  + ((- u_x - u_y) * (- u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_7);
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2_loc * (1.0 + ( u_x - u_y) * c_sq
+                                                                                  + (( u_x - u_y) * ( u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_8);                    //local_density = 0.0;
                     
                     //                    for (kk = 0; kk < NSPEEDS; kk++)
                     //                    {
@@ -607,8 +616,8 @@ int main(int argc, char* argv[])
             
             //int ii;
             //int jj;
-            //int index;
-            //double* current_speed;
+            int index;
+            double* current_speed;
 #pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
             /* loop over _all_ cells */
             for (ii = 0; ii < params.ny; ii++)
@@ -706,9 +715,10 @@ int main(int argc, char* argv[])
                 }
             }
             
-            local_cells = 0;
-            local_u = 0.0;
-#pragma omp for private(ii, jj) nowait //schedule(static)
+
+            int local_cells_2 = 0;
+            double local_u_2 = 0.0;
+#pragma omp for private(ii, jj) //schedule(static)
             for (ii = 0; ii < params.ny*params.nx; ii++)
             {
                 /* don't consider occupied cells */
@@ -811,36 +821,37 @@ int main(int argc, char* argv[])
                     //                    {
                     //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
                     //                    }
-                    double local_density_mult = (u_x * u_x + u_y * u_y) / (two_c_sq);
+                    double local_density_mult = (u_x * u_x + u_y * u_y) * (two_c_sq);
+                    double w1_loc = (w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]));
+                    double w2_loc = w1_loc/4.0;
                     
-                    *(current_speed) = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                    
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0* (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
                                                                       * (1.0 - local_density_mult)) - tmp_speed_0);
-                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
-                                                                                                                                                                                                                       + (u_x * u_x) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_1);
-                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
-                                                                                                                                                                                                                       + (u_y * u_y) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_2);
-                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
-                                                                                                                                                                                                                       + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_3);
-                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
-                                                                                                                                                                                                                       + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_4);
-                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_5);
-                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_6);
-                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_7);
-                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_8);
-                    
-                    /* local density total */
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1_loc * (1.0 + u_x * c_sq
+                                                                                  + (u_x * u_x) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_1);
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1_loc * (1.0 + u_y * c_sq
+                                                                                  + (u_y * u_y) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_2);
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1_loc * (1.0 + (-u_x) * c_sq
+                                                                                  + ((-u_x) * (-u_x)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_3);
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1_loc * (1.0 + (-u_y) * c_sq
+                                                                                  + ((-u_y) * (-u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_4);
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2_loc * (1.0 + (u_x + u_y) * c_sq
+                                                                                  + ((u_x + u_y) * (u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_5);
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2_loc * (1.0 + (- u_x + u_y) * c_sq
+                                                                                  + ((- u_x + u_y) * (- u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_6);
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2_loc * (1.0 + (- u_x - u_y) * c_sq
+                                                                                  + ((- u_x - u_y) * (- u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_7);
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2_loc * (1.0 + ( u_x - u_y) * c_sq
+                                                                                  + (( u_x - u_y) * ( u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_8);
                     //local_density = 0.0;
                     
                     //                    for (kk = 0; kk < NSPEEDS; kk++)
@@ -868,7 +879,7 @@ int main(int argc, char* argv[])
                     /* accumulate the norm of x- and y- velocity components */
                     double u = u_x*u_x + u_y*u_y;
                     
-                    local_u += sqrt(u);
+                    local_u_2 += sqrt(u);
                     /* increase counter of inspected cells */
                     //++tot_cells_1;
                     
@@ -894,16 +905,16 @@ int main(int argc, char* argv[])
                     *(current_speed+6) = tmp_speed[8];
                     *(current_speed+7) = tmp_speed[5];
                     *(current_speed+8) = tmp_speed[6];
-                    ++local_cells;
+                    ++local_cells_2;
                     
                 }
             }
             
 #pragma omp atomic
-            tot_u_2 += local_u;
+            tot_u_2 += local_u_2;
             
 #pragma omp atomic
-            tot_cells_2 += local_cells;
+            tot_cells_2 += local_cells_2;
             
 
             
@@ -1066,8 +1077,369 @@ int main(int argc, char* argv[])
                 }
             }
             
-            local_cells = 0;
-            local_u = 0.0;
+            int local_cells_3 = 0;
+            double local_u_3 = 0.0;
+#pragma omp for private(ii, jj) nowait//schedule(static)
+            for (ii = 0; ii < params.ny*params.nx; ii++)
+            {
+                /* don't consider occupied cells */
+                
+                double* tmp_speed = tmp_cells[ii].speeds;
+                double* current_speed = cells[ii].speeds;
+                
+                double tmp_speed_0 = tmp_speed[0];
+                double tmp_speed_1 = tmp_speed[1];
+                double tmp_speed_2 = tmp_speed[2];
+                double tmp_speed_3 = tmp_speed[3];
+                double tmp_speed_4 = tmp_speed[4];
+                double tmp_speed_5 = tmp_speed[5];
+                double tmp_speed_6 = tmp_speed[6];
+                double tmp_speed_7 = tmp_speed[7];
+                double tmp_speed_8 = tmp_speed[8];
+                
+                if (!obstacles[ii])
+                {
+                    /* compute local density total */
+                    
+                    //double local_density = 0.0;
+                    
+                    
+                    
+                    //int kk;
+                    //                    for (kk = 0; kk < NSPEEDS; kk++)
+                    //                    {
+                    //                        local_density += tmp_speed[kk];
+                    //                    }
+                    
+                    //local_density = (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]);
+                    
+                    /* compute x velocity component */
+                    double u_x = (tmp_speed[1]
+                                  + tmp_speed[5]
+                                  + tmp_speed[8]
+                                  - (tmp_speed[3]
+                                     + tmp_speed[6]
+                                     + tmp_speed[7]))
+                    / (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]);
+                    /* compute y velocity component */
+                    double u_y = (tmp_speed[2]
+                                  + tmp_speed[5]
+                                  + tmp_speed[6]
+                                  - (tmp_speed[4]
+                                     + tmp_speed[7]
+                                     + tmp_speed[8]))
+                    / (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]);
+                    
+                    /* velocity squared */
+                    //double u_sq = (u_x * u_x + u_y * u_y);
+                    
+                    /* directional velocity components */
+                    //                    double u[NSPEEDS];
+                    //                    u[1] =   u_x;        /* east */
+                    //                    u[2] =         u_y;  /* north */
+                    //                    u[3] = - u_x;        /* west */
+                    //                    u[4] =       - u_y;  /* south */
+                    //                    u[5] =   u_x + u_y;  /* north-east */
+                    //                    u[6] = - u_x + u_y;  /* north-west */
+                    //                    u[7] = - u_x - u_y;  /* south-west */
+                    //                    u[8] =   u_x - u_y;  /* south-east */
+                    
+                    
+                    /* equilibrium densities */
+                    //                    double d_equ[NSPEEDS];
+                    //                    /* zero velocity density: weight w0 */
+                    //                    d_equ[0] = w0 * local_density
+                    //                    * (1.0 - u_sq / (two_c_sq));
+                    //                    /* axis speeds: weight w1 */
+                    //                    d_equ[1] = w1 * local_density * (1.0 + u_x / c_sq
+                    //                                                     + (u_x * u_x) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[2] = w1 * local_density * (1.0 + u_y / c_sq
+                    //                                                     + (u_y * u_y) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[3] = w1 * local_density * (1.0 + (-u_x) / c_sq
+                    //                                                     + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[4] = w1 * local_density * (1.0 + (-u_y) / c_sq
+                    //                                                     + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    /* diagonal speeds: weight w2 */
+                    //                    d_equ[5] = w2 * local_density * (1.0 + (u_x + u_y) / c_sq
+                    //                                                     + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[6] = w2 * local_density * (1.0 + (- u_x + u_y) / c_sq
+                    //                                                     + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[7] = w2 * local_density * (1.0 + (- u_x - u_y) / c_sq
+                    //                                                     + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    //                    d_equ[8] = w2 * local_density * (1.0 + ( u_x - u_y) / c_sq
+                    //                                                     + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
+                    //                                                     - u_sq / (two_c_sq));
+                    
+                    /* relaxation step */
+                    //                    for (kk = 0; kk < NSPEEDS; kk++)
+                    //                    {
+                    //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
+                    //                    }
+                    double local_density_mult = (u_x * u_x + u_y * u_y) * (two_c_sq);
+                    double w1_loc = (w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]));
+                    double w2_loc = w1_loc/4.0;
+                    
+                    
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0* (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                                                                      * (1.0 - local_density_mult)) - tmp_speed_0);
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1_loc * (1.0 + u_x * c_sq
+                                                                                  + (u_x * u_x) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_1);
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1_loc * (1.0 + u_y * c_sq
+                                                                                  + (u_y * u_y) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_2);
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1_loc * (1.0 + (-u_x) * c_sq
+                                                                                  + ((-u_x) * (-u_x)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_3);
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1_loc * (1.0 + (-u_y) * c_sq
+                                                                                  + ((-u_y) * (-u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_4);
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2_loc * (1.0 + (u_x + u_y) * c_sq
+                                                                                  + ((u_x + u_y) * (u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_5);
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2_loc * (1.0 + (- u_x + u_y) * c_sq
+                                                                                  + ((- u_x + u_y) * (- u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_6);
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2_loc * (1.0 + (- u_x - u_y) * c_sq
+                                                                                  + ((- u_x - u_y) * (- u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_7);
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2_loc * (1.0 + ( u_x - u_y) * c_sq
+                                                                                  + (( u_x - u_y) * ( u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_8);
+                    /* local density total */
+                    //local_density = 0.0;
+                    
+                    //                    for (kk = 0; kk < NSPEEDS; kk++)
+                    //                    {
+                    //                        local_density += current_speed[kk];
+                    //                    }
+                    
+                    //local_density = current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8];
+                    /* x-component of velocity */
+                    u_x = (current_speed[1]
+                           + current_speed[5]
+                           + current_speed[8]
+                           - (current_speed[3]
+                              + current_speed[6]
+                              + current_speed[7]))
+                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                    /* compute y velocity component */
+                    u_y = (current_speed[2]
+                           + current_speed[5]
+                           + current_speed[6]
+                           - (current_speed[4]
+                              + current_speed[7]
+                              + current_speed[8]))
+                    / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                    /* accumulate the norm of x- and y- velocity components */
+                    double u = u_x*u_x + u_y*u_y;
+                    
+                    local_u_3 += sqrt(u);
+                    /* increase counter of inspected cells */
+                    //++tot_cells_1;
+                    
+                    
+                }else {
+                    /* called after propagate, so taking values from scratch space
+                     ** mirroring, and writing into main grid */
+                    //                    double* current_speed_0 = current_speed;
+                    //                    double* current_speed_1 = (current_speed+1);
+                    //                    double* current_speed_2 = (current_speed+2);
+                    //                    double* current_speed_3 = (current_speed+3);
+                    //                    double* current_speed_4 = (current_speed+4);
+                    //                    double* current_speed_5 = (current_speed+5);
+                    //                    double* current_speed_6 = (current_speed+6);
+                    //                    double* current_speed_7 = (current_speed+7);
+                    //                    double* current_speed_8 = (current_speed+8);
+                    
+                    *(current_speed+1) = tmp_speed[3];
+                    *(current_speed+2) = tmp_speed[4];
+                    *(current_speed+3) = tmp_speed[1];
+                    *(current_speed+4) = tmp_speed[2];
+                    *(current_speed+5) = tmp_speed[7];
+                    *(current_speed+6) = tmp_speed[8];
+                    *(current_speed+7) = tmp_speed[5];
+                    *(current_speed+8) = tmp_speed[6];
+                    ++local_cells_3;
+                    
+                }
+            }
+            
+#pragma omp atomic
+            tot_u_3 += local_u_3;
+            
+#pragma omp atomic
+            tot_cells_3 += local_cells_3;
+            
+
+            
+#pragma omp master
+            {
+                //                double w3 = params.density * params.accel / 9.0;
+                //                double w4 = params.density * params.accel / 36.0;
+                
+                /* modify the 2nd row of the grid */
+                int ii = params.ny - 2;
+                int jj;
+                //#pragma omp parallel num_threads(2)
+                {
+                    for (jj = 0; jj < params.nx; jj++)
+                    {
+                        {
+                            /* if the cell is not occupied and
+                             ** we don't send a negative density */
+                            if (!obstacles[ii * params.nx + jj]
+                                && (cells[ii * params.nx + jj].speeds[3] - w3) > 0.0
+                                && (cells[ii * params.nx + jj].speeds[6] - w4) > 0.0
+                                && (cells[ii * params.nx + jj].speeds[7] - w4) > 0.0)
+                            {
+                                //#pragma omp sections
+                                
+                                //#pragma omp section
+                                
+                                cells[ii * params.nx + jj].speeds[1] += w3;
+                                cells[ii * params.nx + jj].speeds[5] += w4;
+                                cells[ii * params.nx + jj].speeds[8] += w4;
+                                
+                                
+                                
+                                //#pragma omp section
+                                
+                                cells[ii * params.nx + jj].speeds[3] -= w3;
+                                cells[ii * params.nx + jj].speeds[6] -= w4;
+                                cells[ii * params.nx + jj].speeds[7] -= w4;
+                                
+                                /* decrease 'west-side' densities */
+                                
+                                /* increase 'east-side' densities */
+                                
+                            }
+                        }
+                    }
+                    
+                }
+                
+                
+            }
+            //timestep(params, cells, tmp_cells, obstacles);
+            
+            
+            //int chunk = (params.ny*params.nx) / 16;
+            /* loop over the cells in the grid
+             ** NB the collision step is called after
+             ** the propagate step and so values of interest
+             ** are in the scratch-space grid */
+            
+            //int ii;
+            //int jj;
+            //int index;
+            //double* current_speed;
+#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
+            /* loop over _all_ cells */
+            for (ii = 0; ii < params.ny; ii++)
+            {
+                for (jj = 0; jj < params.nx; jj+=4)
+                {
+                    
+                    index = ii * params.nx + jj;
+                    current_speed = cells[index].speeds;
+                    /* determine indices of axis-direction neighbours
+                     ** respecting periodic boundary conditions (wrap around) */
+                    int y_n = (ii + 1) % params.ny;
+                    int x_e = (jj + 1) % params.nx;
+                    int y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                    int x_w = (jj == 0) ? (jj + params.nx - 1) : (jj - 1);
+                    int y_s_mult = y_s * params.nx;
+                    int y_n_mult = y_n * params.nx;
+                    int ii_mult = ii*params.nx;
+                    /* propagate densities to neighbouring cells, following
+                     ** appropriate directions of travel and writing into
+                     ** scratch space grid */
+                    tmp_cells[ii_mult + jj].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                    tmp_cells[ii_mult + x_e].speeds[1] = current_speed[1]; /* east */
+                    tmp_cells[y_n_mult + jj].speeds[2]  = current_speed[2]; /* north */
+                    tmp_cells[ii_mult + x_w].speeds[3] = current_speed[3]; /* west */
+                    tmp_cells[y_s_mult + jj].speeds[4]  = current_speed[4]; /* south */
+                    tmp_cells[y_n_mult + x_e].speeds[5] = current_speed[5]; /* north-east */
+                    tmp_cells[y_n_mult + x_w].speeds[6] = current_speed[6]; /* north-west */
+                    tmp_cells[y_s_mult + x_w].speeds[7] = current_speed[7]; /* south-west */
+                    tmp_cells[y_s_mult + x_e].speeds[8] = current_speed[8]; /* south-east */
+                    
+                    //index = ii * params.nx + jj+1;
+                    current_speed = cells[index+1].speeds;
+                    /* determine indices of axis-direction neighbours
+                     ** respecting periodic boundary conditions (wrap around) */
+                    //y_n = (ii + 1) % params.ny;
+                    x_e = (jj + 2) % params.nx;
+                    //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                    x_w = (jj + 1 - 1);
+                    //                * propagate densities to neighbouring cells, following
+                    //                 ** appropriate directions of travel and writing into
+                    //                 ** scratch space grid */
+                    tmp_cells[ii_mult + jj+ 1].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                    tmp_cells[ii_mult + x_e].speeds[1] = current_speed[1]; /* east */
+                    tmp_cells[y_n_mult + jj+ 1].speeds[2]  = current_speed[2]; /* north */
+                    tmp_cells[ii_mult + x_w].speeds[3] = current_speed[3]; /* west */
+                    tmp_cells[y_s_mult + jj+ 1].speeds[4]  = current_speed[4]; /* south */
+                    tmp_cells[y_n_mult + x_e].speeds[5] = current_speed[5]; /* north-east */
+                    tmp_cells[y_n_mult + x_w].speeds[6] = current_speed[6]; /* north-west */
+                    tmp_cells[y_s_mult + x_w].speeds[7] = current_speed[7]; /* south-west */
+                    tmp_cells[y_s_mult + x_e].speeds[8] = current_speed[8]; /* south-east */
+                    
+                    
+                    current_speed = cells[index+2].speeds;
+                    /* determine indices of axis-direction neighbours
+                     ** respecting periodic boundary conditions (wrap around) */
+                    //y_n = (ii + 1) % params.ny;
+                    x_e = (jj + 3) % params.nx;
+                    //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                    x_w = (jj + 2 - 1);
+                    //                * propagate densities to neighbouring cells, following
+                    //                 ** appropriate directions of travel and writing into
+                    //                 ** scratch space grid */
+                    tmp_cells[ii_mult + jj+ 2].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                    tmp_cells[ii_mult + x_e].speeds[1] = current_speed[1]; /* east */
+                    tmp_cells[y_n_mult + jj+ 2].speeds[2]  = current_speed[2]; /* north */
+                    tmp_cells[ii_mult + x_w].speeds[3] = current_speed[3]; /* west */
+                    tmp_cells[y_s_mult + jj+ 2].speeds[4]  = current_speed[4]; /* south */
+                    tmp_cells[y_n_mult + x_e].speeds[5] = current_speed[5]; /* north-east */
+                    tmp_cells[y_n_mult + x_w].speeds[6] = current_speed[6]; /* north-west */
+                    tmp_cells[y_s_mult + x_w].speeds[7] = current_speed[7]; /* south-west */
+                    tmp_cells[y_s_mult + x_e].speeds[8] = current_speed[8]; /* south-east */
+                    
+                    current_speed = cells[index+3].speeds;
+                    /* determine indices of axis-direction neighbours
+                     ** respecting periodic boundary conditions (wrap around) */
+                    //y_n = (ii + 1) % params.ny;
+                    x_e = (jj + 4) % params.nx;
+                    //y_s = (ii == 0) ? (ii + params.ny - 1) : (ii - 1);
+                    x_w = (jj + 3 - 1);
+                    //                * propagate densities to neighbouring cells, following
+                    //                 ** appropriate directions of travel and writing into
+                    //                 ** scratch space grid */
+                    tmp_cells[ii_mult + jj+ 3].speeds[0]  = current_speed[0]; /* central cell, no movement */
+                    tmp_cells[ii_mult + x_e].speeds[1] = current_speed[1]; /* east */
+                    tmp_cells[y_n_mult + jj+ 3].speeds[2]  = current_speed[2]; /* north */
+                    tmp_cells[ii_mult + x_w].speeds[3] = current_speed[3]; /* west */
+                    tmp_cells[y_s_mult + jj+ 3].speeds[4]  = current_speed[4]; /* south */
+                    tmp_cells[y_n_mult + x_e].speeds[5] = current_speed[5]; /* north-east */
+                    tmp_cells[y_n_mult + x_w].speeds[6] = current_speed[6]; /* north-west */
+                    tmp_cells[y_s_mult + x_w].speeds[7] = current_speed[7]; /* south-west */
+                    tmp_cells[y_s_mult + x_e].speeds[8] = current_speed[8]; /* south-east */
+                    
+                    
+                }
+            }
+            
+            int local_cells_4 = 0;
+            double local_u_4 = 0.0;
 #pragma omp for private(ii, jj) nowait //schedule(static)
             for (ii = 0; ii < params.ny*params.nx; ii++)
             {
@@ -1171,35 +1543,37 @@ int main(int argc, char* argv[])
                     //                    {
                     //                        current_speed[kk] = tmp_speed[kk] + params.omega * (d_equ[kk] - tmp_speed[kk]);
                     //                    }
-                    double local_density_mult = (u_x * u_x + u_y * u_y) / (two_c_sq);
+                    double local_density_mult = (u_x * u_x + u_y * u_y) * (two_c_sq);
+                    double w1_loc = (w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]));
+                    double w2_loc = w1_loc/4.0;
                     
-                    *(current_speed) = tmp_speed_0 + params.omega * ((w0 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
+                    
+                    *(current_speed) = tmp_speed_0 + params.omega * ((w0* (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8])
                                                                       * (1.0 - local_density_mult)) - tmp_speed_0);
-                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_x / c_sq
-                                                                                                                                                                                                                       + (u_x * u_x) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_1);
-                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + u_y / c_sq
-                                                                                                                                                                                                                       + (u_y * u_y) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_2);
-                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_x) / c_sq
-                                                                                                                                                                                                                       + ((-u_x) * (-u_x)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_3);
-                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (-u_y) / c_sq
-                                                                                                                                                                                                                       + ((-u_y) * (-u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_4);
-                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((u_x + u_y) * (u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_5);
-                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x + u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x + u_y) * (- u_x + u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_6);
-                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + (- u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + ((- u_x - u_y) * (- u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_7);
-                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2 * (tmp_speed[0] + tmp_speed[1] + tmp_speed[2] + tmp_speed[3] + tmp_speed[4] + tmp_speed[5] + tmp_speed[6] + tmp_speed[7] + tmp_speed[8]) * (1.0 + ( u_x - u_y) / c_sq
-                                                                                                                                                                                                                       + (( u_x - u_y) * ( u_x - u_y)) / (two_c_sq_c_sq)
-                                                                                                                                                                                                                       - local_density_mult)) - tmp_speed_8);
-                    
+                    *(current_speed+1) = tmp_speed_1 + params.omega * ((w1_loc * (1.0 + u_x * c_sq
+                                                                                  + (u_x * u_x) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_1);
+                    *(current_speed+2) = tmp_speed_2 + params.omega * ((w1_loc * (1.0 + u_y * c_sq
+                                                                                  + (u_y * u_y) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_2);
+                    *(current_speed+3) = tmp_speed_3 + params.omega * ((w1_loc * (1.0 + (-u_x) * c_sq
+                                                                                  + ((-u_x) * (-u_x)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_3);
+                    *(current_speed+4) = tmp_speed_4 + params.omega * ((w1_loc * (1.0 + (-u_y) * c_sq
+                                                                                  + ((-u_y) * (-u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_4);
+                    *(current_speed+5) = tmp_speed_5 + params.omega * ((w2_loc * (1.0 + (u_x + u_y) * c_sq
+                                                                                  + ((u_x + u_y) * (u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_5);
+                    *(current_speed+6) = tmp_speed_6 + params.omega * ((w2_loc * (1.0 + (- u_x + u_y) * c_sq
+                                                                                  + ((- u_x + u_y) * (- u_x + u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_6);
+                    *(current_speed+7) = tmp_speed_7 + params.omega * ((w2_loc * (1.0 + (- u_x - u_y) * c_sq
+                                                                                  + ((- u_x - u_y) * (- u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_7);
+                    *(current_speed+8) = tmp_speed_8 + params.omega * ((w2_loc * (1.0 + ( u_x - u_y) * c_sq
+                                                                                  + (( u_x - u_y) * ( u_x - u_y)) * (two_c_sq_c_sq)
+                                                                                  - local_density_mult)) - tmp_speed_8);
                     /* local density total */
                     //local_density = 0.0;
                     
@@ -1228,7 +1602,7 @@ int main(int argc, char* argv[])
                     /* accumulate the norm of x- and y- velocity components */
                     double u = u_x*u_x + u_y*u_y;
                     
-                    local_u += sqrt(u);
+                    local_u_4 += sqrt(u);
                     /* increase counter of inspected cells */
                     //++tot_cells_1;
                     
@@ -1254,27 +1628,26 @@ int main(int argc, char* argv[])
                     *(current_speed+6) = tmp_speed[8];
                     *(current_speed+7) = tmp_speed[5];
                     *(current_speed+8) = tmp_speed[6];
-                    ++local_cells;
+                    ++local_cells_4;
                     
                 }
             }
             
 #pragma omp atomic
-            tot_u_3 += local_u;
+            tot_u_4 += local_u_4;
             
 #pragma omp atomic
-            tot_cells_3 += local_cells;
-            
+            tot_cells_4 += local_cells_4;
+       }
 
-        }
-        first_vel = first_vel = tot_u_1 / (double)(params.ny*params.nx-tot_cells_1);
-        av_vels[tt] = first_vel;
+        av_vels[tt] = tot_u_1 / (double)(params.ny*params.nx-tot_cells_1);
         
-        second_vel = second_vel = tot_u_2 / (double)(params.ny*params.nx-tot_cells_2);
-        av_vels[tt+1] = second_vel;
         
-        third_vel = third_vel = tot_u_3 / (double)(params.ny*params.nx-tot_cells_3);
-        av_vels[tt+2] = third_vel;
+        av_vels[tt+1] = tot_u_2 / (double)(params.ny*params.nx-tot_cells_2);
+        
+        av_vels[tt+2] = tot_u_3 / (double)(params.ny*params.nx-tot_cells_3);
+        
+        av_vels[tt+3] = tot_u_4 / (double)(params.ny*params.nx-tot_cells_4);
 
         
         //propagate(params, cells, tmp_cells);
@@ -1283,6 +1656,20 @@ int main(int argc, char* argv[])
         printf("==timestep: %d==\n", tt);
         printf("av velocity: %.12E\n", av_vels[tt]);
         printf("tot density: %.12E\n", total_density(params, cells));
+        
+        printf("==timestep: %d==\n", tt+1);
+        printf("av velocity: %.12E\n", av_vels[tt+1]);
+        printf("tot density: %.12E\n", total_density(params, cells));
+        
+        printf("==timestep: %d==\n", tt+2);
+        printf("av velocity: %.12E\n", av_vels[tt+2]);
+        printf("tot density: %.12E\n", total_density(params, cells));
+        
+        printf("==timestep: %d==\n", tt+3);
+        printf("av velocity: %.12E\n", av_vels[tt+3]);
+        printf("tot density: %.12E\n", total_density(params, cells));
+
+
 #endif
     }
     
