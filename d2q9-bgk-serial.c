@@ -1050,11 +1050,11 @@ int main(int argc, char* argv[])
         int ii;
         int jj;
         /* loop over all non-blocked cells */
-#pragma omp parallel
+//#pragma omp parallel
         {
             int local_cells =0;
             double local_u=0.0;
-#pragma omp for private(ii, jj) nowait
+//#pragma omp for private(ii, jj) nowait
             for (ii = 0; ii < params.ny*params.nx; ii++)
             {
                 /* ignore occupied cells */
@@ -1089,10 +1089,10 @@ int main(int argc, char* argv[])
                     ++local_cells;
                 
             }
-#pragma omp atomic
+//#pragma omp atomic
             tot_u += local_u;
             
-#pragma omp atomic
+//#pragma omp atomic
             tot_cells += local_cells;
         }
         
