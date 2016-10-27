@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#PBS -N d2q9-bgk
+#PBS -N d2q9-bgk-serial
 #PBS -joe
-#PBS -o d2q9-bgk.out
+#PBS -o d2q9-bgk-serial.out
 #PBS -q teaching
 #PBS -l epilogue=~ggdagw/epilogue.sh
 #PBS -l nodes=1:ppn=16,walltime=00:15:00
@@ -11,7 +11,7 @@
 #PBS -m a
 
 #! application name
-application="./d2q9-bgk"
+application="./d2q9-bgk-serial”
 
 #! Run options for the application
 options="input_256x256.params obstacles_256x256.dat"

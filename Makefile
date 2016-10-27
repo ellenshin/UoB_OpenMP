@@ -1,9 +1,9 @@
 # Makefile
 
-EXE=d2q9-bgk
+EXE=d2q9-bgk-serial
 
 CC=icc
-CFLAGS= -qopenmp -fast -O3
+CFLAGS= -fast -O3
 LIBS = -lm
 
 FINAL_STATE_FILE=./final_state.dat
