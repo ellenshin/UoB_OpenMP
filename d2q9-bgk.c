@@ -260,10 +260,11 @@ int main(int argc, char* argv[])
 
             int ii;
             int jj;
-#pragma omp for collapse(2) private(ii, jj) schedule(static)
+#pragma omp for private(ii, jj) schedule(static)
             /* loop over _all_ cells */
             for (ii = 0; ii < params.ny; ii++)
             {
+#pragma omp simd
                 for (jj = 0; jj < params.nx; jj+=4)
                 {
                     
@@ -617,17 +618,18 @@ int main(int argc, char* argv[])
             
             //int ii;
             //int jj;
-            int index;
-            double* current_speed;
-#pragma omp for collapse(2) private(ii, jj, index, current_speed) schedule(static)
+//            int index;
+//            double* current_speed;
+#pragma omp for private(ii, jj) schedule(static)
             /* loop over _all_ cells */
             for (ii = 0; ii < params.ny; ii++)
             {
+#pragma omp simd
                 for (jj = 0; jj < params.nx; jj+=4)
                 {
                     
-                    index = ii * params.nx + jj;
-                    current_speed = cells[index].speeds;
+                    int index = ii * params.nx + jj;
+                    double* current_speed = cells[index].speeds;
                     /* determine indices of axis-direction neighbours
                      ** respecting periodic boundary conditions (wrap around) */
                     int y_n = (ii + 1) % params.ny;
