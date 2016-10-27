@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
                 unsigned int local_cells = 0;
                 double local_u = 0.0;
 #pragma omp for private(ii, jj) nowait //schedule(static)
-                for (ii = 0; ii < params.ny*params.nx; ii+=1)
+                for (ii = 0; ii < params.ny*params.nx; ii++)
                 {
                     /* don't consider occupied cells */
                     
@@ -472,21 +472,21 @@ int main(int argc, char* argv[])
                         
                         //local_density = current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8];
                         /* x-component of velocity */
-                        u_x = (current_speed[1]
+                        u_x = abs((current_speed[1]
                                + current_speed[5]
                                + current_speed[8]
                                - (current_speed[3]
                                   + current_speed[6]
                                   + current_speed[7]))
-                        / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                        / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]));
                         /* compute y velocity component */
-                        u_y = (current_speed[2]
+                        u_y = abs((current_speed[2]
                                + current_speed[5]
                                + current_speed[6]
                                - (current_speed[4]
                                   + current_speed[7]
                                   + current_speed[8]))
-                        / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]);
+                        / (current_speed[0] + current_speed[1] + current_speed[2] + current_speed[3] + current_speed[4] + current_speed[5] + current_speed[6] + current_speed[7] + current_speed[8]));
                         /* accumulate the norm of x- and y- velocity components */
                         double u = u_x*u_x + u_y*u_y;
                         
